@@ -1,6 +1,26 @@
-out
-dist
-node_modules
-.vscode-test/
+# dependencies
+node_modules/
+
+# build outputs
+out/
+dist/
 *.vsix
+
+# VS Code test
+.vscode-test/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS
+.DS_Store
+
+# env / secrets
+.env
+.env.*
+
+# Wiz marker file (generated)
 **/.wizpage
