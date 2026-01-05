@@ -1,0 +1,217 @@
+{
+  "publisher": "galaxy-78",
+  "name": "season-editor",
+  "displayName": "Season Editor",
+  "description": "wiz 폴더구조를 vscode 에서도 사용할 수 있도록 한 extension 입니다.",
+  "license": "MIT",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.107.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:wizExplorer",
+    "onCommand:wiz.openFolder",
+    "onCommand:wiz.refresh",
+    "onCommand:wiz.newFile",
+    "onCommand:wiz.newFolder",
+    "onCommand:wiz.newWizPage",
+    "onCommand:wiz.rename",
+    "onCommand:wiz.delete",
+    "onCommand:seasonExplorer.undo",
+    "onCommand:seasonExplorer.redo"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "Season Editor",
+      "properties": {
+        "seasonEditor.defaultModes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "page",
+              "component",
+              "layout",
+              "portal"
+            ]
+          },
+          "default": [
+            "page",
+            "component",
+            "layout",
+            "portal"
+          ],
+          "description": "New Wiz Page 모드 선택에 보여줄 목록"
+        }
+      }
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "wiz.newFile",
+          "when": "view == wizExplorer"
+        },
+        {
+          "command": "wiz.newFolder",
+          "when": "view == wizExplorer"
+        },
+        {
+          "command": "wiz.newWizPage",
+          "when": "view == wizExplorer"
+        },
+        {
+          "command": "wiz.refresh",
+          "when": "view == wizExplorer"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "wiz.newFile",
+          "when": "view == wizExplorer && (viewItem == folder || viewItem == workspace)"
+        },
+        {
+          "command": "wiz.newFolder",
+          "when": "view == wizExplorer && (viewItem == folder || viewItem == workspace)"
+        },
+        {
+          "command": "wiz.newWizPage",
+          "when": "view == wizExplorer && (viewItem == folder || viewItem == workspace || viewItem == modeGroup)"
+        },
+        {
+          "command": "wiz.rename",
+          "when": "view == wizExplorer && (viewItem == folder || viewItem == file || viewItem == wizFolder)"
+        },
+        {
+          "command": "wiz.delete",
+          "when": "view == wizExplorer && (viewItem == folder || viewItem == file || viewItem == wizFolder)"
+        }
+      ],
+      "webview/context": [
+        {
+          "command": "wiz.saveActive"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "wiz",
+          "title": "SEASON",
+          "icon": "media/wiz.svg"
+        }
+      ]
+    },
+    "views": {
+      "wiz": [
+        {
+          "id": "wizExplorer",
+          "name": "Explorer",
+          "dragAndDrop": true
+        }
+      ]
+    },
+    "customEditors": [
+      {
+        "viewType": "wiz.folderEditor",
+        "displayName": "Wiz Folder Editor",
+        "selector": [
+          {
+            "filenamePattern": "**/.wizpage"
+          }
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "wiz.openFolder",
+        "title": "Open Folder"
+      },
+      {
+        "command": "wiz.newFile",
+        "title": "New File"
+      },
+      {
+        "command": "wiz.newFolder",
+        "title": "New Folder"
+      },
+      {
+        "command": "wiz.newWizPage",
+        "title": "New Wiz Page"
+      },
+      {
+        "command": "wiz.rename",
+        "title": "Rename"
+      },
+      {
+        "command": "wiz.delete",
+        "title": "Delete"
+      },
+      {
+        "command": "wiz.refresh",
+        "title": "Refresh"
+      },
+      {
+        "command": "wiz.saveActive",
+        "title": "Save Active Tab"
+      },
+      {
+        "command": "seasonExplorer.undo",
+        "title": "Season Explorer Undo"
+      },
+      {
+        "command": "seasonExplorer.redo",
+        "title": "Season Explorer Redo"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "wiz.saveActive",
+        "key": "cmd+s",
+        "mac": "cmd+s",
+        "when": "webviewPanelFocus && activeWebviewPanelId == wiz.folderEditor"
+      },
+      {
+        "command": "wiz.saveActive",
+        "key": "ctrl+s",
+        "when": "webviewPanelFocus && activeWebviewPanelId == wiz.folderEditor"
+      },
+      {
+        "command": "seasonExplorer.undo",
+        "key": "cmd+z",
+        "mac": "cmd+z"
+      },
+      {
+        "command": "seasonExplorer.redo",
+        "key": "cmd+shift+z",
+        "mac": "cmd+shift+z"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./ && npm run copy-monaco",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test",
+    "copy-monaco": "node scripts/copy-monaco.mjs",
+    "build": "npm run compile && npm run copy-monaco"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "22.x",
+    "@types/vscode": "^1.107.0",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
+    "eslint": "^9.39.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.48.1"
+  },
+  "dependencies": {
+    "monaco-editor": "^0.55.1"
+  }
+}
