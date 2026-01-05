@@ -4,6 +4,16 @@
   "displayName": "Season Editor",
   "description": "wiz 폴더구조를 vscode 에서도 사용할 수 있도록 한 extension 입니다.",
   "license": "MIT",
+  "keywords": [
+    "wiz",
+    "season",
+    "editor",
+    "custom editor",
+    "tree view"
+  ],
+  "author": {
+    "name": "galaxy-78"
+  },
   "version": "0.0.1",
   "repository": {
     "type": "git",
@@ -109,7 +119,7 @@
         {
           "id": "wiz",
           "title": "SEASON",
-          "icon": "media/wiz.svg"
+          "icon": "media/season.png"
         }
       ]
     },

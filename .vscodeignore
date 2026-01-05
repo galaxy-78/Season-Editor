@@ -1,12 +1,9 @@
-.vscode/**
-.vscode-test/**
 src/**
 .gitignore
 .yarnrc
 vsc-extension-quickstart.md
 **/tsconfig*.json
 **/eslint.config.mjs
-**/*.map
 **/*.ts
 **/.vscode-test.*
 **/node_modules/**
@@ -18,3 +15,17 @@ vsc-extension-quickstart.md
 **/pnpm-lock.yaml
 **/package-lock.json
 **/.DS_Store
+
+# build/packaging scripts, tests 제외
+scripts/**
+out/test/**
+**/*.test.js
+**/*.spec.js
+
+# 개발 문서/설정
+.vscode/**
+.vscode-test/**
+**/*.map
+
+
+**/*.svg

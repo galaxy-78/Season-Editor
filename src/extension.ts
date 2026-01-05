@@ -1251,7 +1251,7 @@ class WizFolderEditorProvider implements vscode.CustomReadonlyEditorProvider {
             font-src ${webview.cspSource} data:;
             script-src ${webview.cspSource} 'nonce-${nonce}' blob:;
             worker-src blob:;
-            connect-src ${webview.cspSource} https: http: ws: wss:;
+            connect-src ${webview.cspSource};
           ">
 
         <link rel="stylesheet" href="${cssUri}">
