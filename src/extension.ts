@@ -368,8 +368,8 @@ class FsNodeItem extends vscode.TreeItem {
       kind === "wizModeRoot"
         ? "Wiz (by mode)"
         : kind === "modeGroup"
-        ? args.modeKey
-        : path.basename(args.uri.fsPath);
+          ? args.modeKey
+          : path.basename(args.uri.fsPath);
 
     super(
       label,
@@ -612,9 +612,7 @@ const TREE_MIME = "application/vnd.code.tree.wizExplorer";
 const EXPLORER_TREE_MIME = "application/vnd.code.tree.explorer";
 const URI_LIST_MIME = "application/vnd.code.uri-list";
 
-class SeasonExplorerDnD
-  implements vscode.TreeDragAndDropController<FsNodeItem>
-{
+class SeasonExplorerDnD implements vscode.TreeDragAndDropController<FsNodeItem> {
   readonly dragMimeTypes = [
     TREE_MIME,
     EXPLORER_TREE_MIME,
@@ -1186,9 +1184,8 @@ class WizFolderEditorProvider implements vscode.CustomReadonlyEditorProvider {
             return;
           }
 
-          const { text, missing } = await getTemplateFromWizFolder(
-            candidateFolder
-          );
+          const { text, missing } =
+            await getTemplateFromWizFolder(candidateFolder);
           post({ type: "template", text, missing });
         } catch (e) {
           console.error("[requestTemplateFromLastDrag] failed", e);
