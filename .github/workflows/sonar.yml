@@ -1,0 +1,41 @@
+name: SonarCloud
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  sonarcloud:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install
+        run: npm ci
+
+      # VSCode extension은 일반적으로 lint 정도만 돌리고,
+      # vscode-test는 CI 환경/설정에 따라 흔들릴 수 있어 "있으면 돌리되 실패해도 스캔은 하게" 처리.
+      - name: Lint (if available)
+        run: npm run lint --if-present
+
+      - name: Test (if available)
+        run: npm test --if-present
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v3
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

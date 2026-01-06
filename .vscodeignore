@@ -27,6 +27,9 @@ out/test/**
 .vscode-test/**
 **/*.map
 
-
 **/*.svg
+**/.vscode-test/**
+*.vsix
+.DS_Store
+
 media/monaco/**

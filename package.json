@@ -26,6 +26,7 @@
   "engines": {
     "vscode": "^1.107.0"
   },
+  "icon": "media/season.png",
   "categories": [
     "Other"
   ],

@@ -1,9 +1,7 @@
-# Change Log
+# Changelog
 
-All notable changes to the "season-editor" extension will be documented in this file.
+## 0.0.5
+- Publishing settings cleanup
 
-Check [Keep a Changelog] for recommendations on how to structure this file.
-
-## [Unreleased]
-
+## 0.0.1
 - Initial release
