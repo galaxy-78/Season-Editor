@@ -186,10 +186,6 @@ function extractFsPathFromDroppedText(s) {
     } catch {}
   }
 
-  // https://file+.vscode-resource.../Users/...
-  const m1 = s.match(/^https?:\/\/file\+\.vscode-resource[^/]*\/(.*)$/);
-  if (m1) return ("/" + decodeURIComponent(m1[1])).replace(/\$\d+$/, "");
-
   // 그냥 절대경로
   if (s.startsWith("/")) return s;
 

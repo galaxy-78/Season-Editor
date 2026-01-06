@@ -1070,7 +1070,6 @@ class WizFolderEditorProvider implements vscode.CustomReadonlyEditorProvider {
                 parsed.scheme === "http" ||
                 parsed.scheme === "https"
               ) {
-                // https://file+.vscode-resource.../Users/... 형태
                 if (parsed.path?.startsWith("/"))
                   dropped = vscode.Uri.file(stripVsCodeSuffix(parsed.path));
               }
