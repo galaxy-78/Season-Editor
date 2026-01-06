@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import * as path from "path";
+import * as crypto from "crypto";
 
 type FsOp =
   | { type: "createFile"; uri: vscode.Uri; contents?: Uint8Array }
@@ -1195,18 +1196,12 @@ class WizFolderEditorProvider implements vscode.CustomReadonlyEditorProvider {
       }
     });
 
-    // 처음 열릴 때 Pug를 기본 로드(원하면 다른 탭)
+    // 처음 열릴 때 Pug를 기본 로드
     post({ type: "openTab", key: "pug" });
   }
 
   private getNonce(): string {
-    const possible =
-      "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let text = "";
-    for (let i = 0; i < 32; i++) {
-      text += possible.charAt(Math.floor(Math.random() * possible.length));
-    }
-    return text;
+    return crypto.randomBytes(16).toString("hex");
   }
 
   private getHtml(webview: vscode.Webview): string {
@@ -1214,7 +1209,7 @@ class WizFolderEditorProvider implements vscode.CustomReadonlyEditorProvider {
 
     const mediaRoot = vscode.Uri.joinPath(this.context.extensionUri, "media");
 
-    // ✅ wiz assets are under media/wiz/
+    // wiz assets are under media/wiz/
     const wizRoot = vscode.Uri.joinPath(mediaRoot, "wiz");
 
     const cssUri = webview.asWebviewUri(
