@@ -1,6 +1,16 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import * as crypto from "crypto";
+import {
+  ALL_WIZ_MODES,
+  WizMode,
+  isWizMode,
+  makeDefaultIdPrefix,
+  deriveIdAndNamespace,
+  getPortalFromBaseFsPath,
+  buildTemplate,
+  sanitizeForWebview,
+} from "./lib/wiz-utils";
 
 type FsOp =
   | { type: "createFile"; uri: vscode.Uri; contents?: Uint8Array }
@@ -35,13 +45,6 @@ const WIZ_FILES = [
   { key: "socket", label: "Socket", filename: "socket.py" },
 ];
 
-const ALL_WIZ_MODES = ["page", "component", "layout", "portal"] as const;
-type WizMode = (typeof ALL_WIZ_MODES)[number];
-
-function isWizMode(x: any): x is WizMode {
-  return (ALL_WIZ_MODES as readonly string[]).includes(String(x));
-}
-
 function getSeasonConfig() {
   const cfg = vscode.workspace.getConfiguration("seasonEditor");
 
@@ -70,71 +73,6 @@ async function promptMode(): Promise<WizMode | undefined> {
     title: "Select Wiz mode",
     placeHolder: modes.join(" / "),
   })) as WizMode | undefined;
-}
-
-function makeDefaultIdPrefix(mode: WizMode) {
-  // portal 제외 3개만 prefix
-  if (mode === "portal") return "";
-  return `${mode}.`; // "component." | "layout." | "page."
-}
-
-function deriveIdAndNamespace(mode: WizMode, raw: string) {
-  const id = raw.trim();
-
-  if (mode === "portal") {
-    return { id, namespace: id };
-  }
-
-  const prefix = `${mode}.`;
-  // prefix가 없으면 자동으로 붙여주는 정책(원하면 강제/에러로 바꿔도 됨)
-  const fixedId = id.startsWith(prefix) ? id : prefix + id;
-
-  let ns = fixedId.slice(prefix.length); // "nav.admin"
-  ns = ns.replace(/^\.+/, ""); // 혹시 ".nav.admin" 같은 경우 방어
-  ns = ns.replace(/\.+$/, ""); // 끝에 점도 제거(선택)
-
-  return { id: fixedId, namespace: ns };
-}
-
-function normalizeNamespace(ns: string) {
-  return String(ns ?? "")
-    .trim()
-    .replace(/^\.+/, "")
-    .replace(/\.+$/, "");
-}
-
-function namespaceToDash(ns: string) {
-  const clean = normalizeNamespace(ns);
-  if (!clean) return "";
-  return clean.split(".").filter(Boolean).join("-");
-}
-
-function splitPathSegments(u: vscode.Uri) {
-  return u.fsPath.split(path.sep).filter(Boolean);
-}
-
-function getPortalFromBaseUri(baseUri: vscode.Uri): string | null {
-  const segs = splitPathSegments(baseUri);
-  const idx = segs.lastIndexOf("portal");
-  if (idx === -1) return null;
-  const appName = segs[idx + 1];
-  return appName ? appName : null;
-}
-
-function buildTemplate(mode: WizMode, namespace: string, baseUri: vscode.Uri) {
-  const tail = namespaceToDash(namespace); // nav.admin -> nav-admin
-
-  if (mode === "portal") {
-    const appName = getPortalFromBaseUri(baseUri);
-    if (!appName) {
-      throw new Error(
-        "portal Wiz Page는 'portal/<app_name>/...' 경로 아래에서만 생성할 수 있습니다."
-      );
-    }
-    return `wiz-portal-${appName}${tail ? "-" + tail : ""}()`;
-  }
-
-  return `wiz-${mode}${tail ? "-" + tail : ""}()`;
 }
 
 function buildAppJson(
@@ -921,30 +859,6 @@ class WizFolderEditorProvider implements vscode.CustomReadonlyEditorProvider {
     const folderUri = vscode.Uri.file(folderFsPath);
     const folderName = path.basename(folderFsPath);
 
-    function sanitizeForWebview(html: string) {
-      // VSCode webview wrapper가 html을 문자열로 직렬화할 때 깨는 대표 문자
-      html = html
-        .replaceAll("\u2028", "\\u2028")
-        .replaceAll("\u2029", "\\u2029");
-
-      // 깨진 surrogate 제거(단독 high/low)
-      // (replaceAll은 RegExp 사용 시 /g 필수)
-      html = html.replaceAll(
-        /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g,
-        ""
-      );
-
-      // NULL + 기타 제어문자 제거
-      // - Cc: Control chars (NULL 포함)
-      // - Cf: Format chars (ZWJ 등)
-      // - 단, 줄바꿈/탭은 유지
-      html = html.replaceAll(/[\p{Cc}\p{Cf}]/gu, (ch) => {
-        return ch === "\n" || ch === "\r" || ch === "\t" ? ch : "";
-      });
-
-      return html;
-    }
-
     const raw = this.getHtml(webviewPanel.webview);
     // 디버그: 렌더된 HTML을 임시로 저장
     const debugUri = vscode.Uri.joinPath(
@@ -1415,7 +1329,7 @@ async function createWizPageUndoable(
 
   // ✅ app.json (mode/id/namespace/template 반영)
   {
-    const template = buildTemplate(mode, namespace, parentDir); // ✅ parentDir 사용!
+    const template = buildTemplate(mode, namespace, parentDir.fsPath);
     const fileUri = vscode.Uri.joinPath(wizDir, "app.json");
     const data = Buffer.from(
       buildAppJson(mode, id, namespace, template),
@@ -1592,7 +1506,7 @@ export function activate(context: vscode.ExtensionContext) {
       if (!mode) return;
 
       if (mode === "portal") {
-        const appName = getPortalFromBaseUri(baseUri);
+        const appName = getPortalFromBaseFsPath(baseUri.fsPath);
         if (!appName) {
           vscode.window.showErrorMessage(
             "portal Wiz Page는 'portal/<app_name>/...' 경로 아래에서만 생성할 수 있습니다."
