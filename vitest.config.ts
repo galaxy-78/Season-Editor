@@ -5,5 +5,10 @@ export default defineConfig({
     include: ["src/test/**/*.unit.test.ts"],
     exclude: ["src/test/extension.test.ts", "out/**", "node_modules/**"],
     environment: "node",
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "lcov"],
+      reportsDirectory: "coverage",
+    },
   },
 });
