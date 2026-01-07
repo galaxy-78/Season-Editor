@@ -40,10 +40,7 @@ export function deriveIdAndNamespace(mode: WizMode, raw: string) {
 }
 
 export function normalizeNamespace(ns: string) {
-  return String(ns ?? "")
-    .trim()
-    .replace(/^\.+/, "")
-    .replace(/\.+$/, "");
+  return trimDots(String(ns ?? "").trim());
 }
 
 export function namespaceToDash(ns: string) {
