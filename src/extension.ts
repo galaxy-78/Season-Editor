@@ -922,19 +922,25 @@ class WizFolderEditorProvider implements vscode.CustomReadonlyEditorProvider {
     const folderName = path.basename(folderFsPath);
 
     function sanitizeForWebview(html: string) {
-      // VSCode webview wrapper 직렬화 이슈 대응
+      // VSCode webview wrapper가 html을 문자열로 직렬화할 때 깨는 대표 문자
       html = html
         .replaceAll("\u2028", "\\u2028")
         .replaceAll("\u2029", "\\u2029");
 
-      // 깨진 surrogate + 제어문자(C0) 제거 (정규식은 replaceAll보다 replace(/.../g)이 정석)
-      // - 단독 high surrogate 제거
-      // - 단독 low surrogate 제거
-      // - NULL 포함 C0 control chars 제거
-      html = html.replace(
-        /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]|[\x00-\x08\x0B\x0C\x0E-\x1F]/g,
+      // 깨진 surrogate 제거(단독 high/low)
+      // (replaceAll은 RegExp 사용 시 /g 필수)
+      html = html.replaceAll(
+        /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g,
         ""
       );
+
+      // NULL + 기타 제어문자 제거
+      // - Cc: Control chars (NULL 포함)
+      // - Cf: Format chars (ZWJ 등)
+      // - 단, 줄바꿈/탭은 유지
+      html = html.replaceAll(/[\p{Cc}\p{Cf}]/gu, (ch) => {
+        return ch === "\n" || ch === "\r" || ch === "\t" ? ch : "";
+      });
 
       return html;
     }
