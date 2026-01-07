@@ -922,15 +922,19 @@ class WizFolderEditorProvider implements vscode.CustomReadonlyEditorProvider {
     const folderName = path.basename(folderFsPath);
 
     function sanitizeForWebview(html: string) {
-      // VSCode webview wrapper가 html을 문자열로 직렬화할 때 깨는 대표 문자
-      html = html.replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+      // VSCode webview wrapper 직렬화 이슈 대응
+      html = html
+        .replaceAll("\u2028", "\\u2028")
+        .replaceAll("\u2029", "\\u2029");
 
-      // 깨진 surrogate 제거(단독 high/low)
-      html = html.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, "");
-      html = html.replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, "");
-
-      // (선택) NULL도 제거
-      html = html.replace(/\u0000/g, "");
+      // 깨진 surrogate + 제어문자(C0) 제거 (정규식은 replaceAll보다 replace(/.../g)이 정석)
+      // - 단독 high surrogate 제거
+      // - 단독 low surrogate 제거
+      // - NULL 포함 C0 control chars 제거
+      html = html.replace(
+        /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]|[\x00-\x08\x0B\x0C\x0E-\x1F]/g,
+        ""
+      );
 
       return html;
     }
