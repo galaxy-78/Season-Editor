@@ -33,3 +33,7 @@ out/test/**
 .DS_Store
 
 media/monaco/**
+coverage/**
+src/test/**
+**/*.test.ts
+**/*.unit.test.ts
