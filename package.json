@@ -212,18 +212,19 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
-    "compile": "tsc -p ./ && npm run copy-monaco",
+    "compile": "tsc -p tsconfig.extension.json && npm run copy-monaco",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
+    "test": "vscode-test",
     "test:unit": "vitest run --coverage",
-    "test": "npm run compile && npm run lint && npm run test:unit && vscode-test",
+    "test:unit:ci": "vitest run --coverage --reporter=default",
     "copy-monaco": "node scripts/copy-monaco.mjs",
     "build": "npm run compile && npm run copy-monaco"
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/node": "22.x",
+    "@types/node": "^22.19.3",
     "@types/vscode": "^1.107.0",
     "@vitest/coverage-v8": "^4.0.16",
     "@vscode/test-cli": "^0.0.12",
