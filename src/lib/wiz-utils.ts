@@ -13,6 +13,16 @@ export function makeDefaultIdPrefix(mode: WizMode) {
   return `${mode}.`;
 }
 
+function trimDots(s: string): string {
+  let start = 0;
+  let end = s.length;
+
+  while (start < end && s.charCodeAt(start) === 46) start++; // '.'
+  while (end > start && s.charCodeAt(end - 1) === 46) end--; // '.'
+
+  return s.slice(start, end);
+}
+
 export function deriveIdAndNamespace(mode: WizMode, raw: string) {
   const id = raw.trim();
 
@@ -24,8 +34,7 @@ export function deriveIdAndNamespace(mode: WizMode, raw: string) {
   const fixedId = id.startsWith(prefix) ? id : prefix + id;
 
   let ns = fixedId.slice(prefix.length);
-  ns = ns.replace(/^\.+/, "");
-  ns = ns.replace(/\.+$/, "");
+  ns = trimDots(ns);
 
   return { id: fixedId, namespace: ns };
 }
