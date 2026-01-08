@@ -7,6 +7,7 @@ import {
   buildTemplate,
   splitName,
   sanitizeForWebview,
+  normalizeNamespace,
 } from "../lib/wiz-utils";
 
 describe("wiz-utils", () => {
@@ -28,10 +29,20 @@ describe("wiz-utils", () => {
     assert.equal(out.namespace, "app.main");
   });
 
+  it("deriveIdAndNamespace: keeps prefix if already present", () => {
+    const out = deriveIdAndNamespace("layout", "layout.nav.admin");
+    assert.equal(out.id, "layout.nav.admin");
+    assert.equal(out.namespace, "nav.admin");
+  });
+
   it("namespaceToDash: dot namespace => dash", () => {
     assert.equal(namespaceToDash("nav.admin"), "nav-admin");
     assert.equal(namespaceToDash("..nav..admin.."), "nav-admin");
     assert.equal(namespaceToDash(""), "");
+  });
+
+  it("namespaceToDash: dots only becomes empty", () => {
+    assert.equal(namespaceToDash("..."), "");
   });
 
   it("buildTemplate: non-portal", () => {
@@ -61,5 +72,15 @@ describe("wiz-utils", () => {
     assert.equal(out.includes("\u0000"), false);
     assert.equal(out.includes("\t"), true);
     assert.equal(out.includes("\n"), true);
+  });
+
+  it("normalizeNamespace: trims whitespace and outer dots", () => {
+    assert.equal(normalizeNamespace("  ..nav.admin..  "), "nav.admin");
+  });
+
+  it("normalizeNamespace: handles only dots / nullish", () => {
+    assert.equal(normalizeNamespace("...."), "");
+    assert.equal(normalizeNamespace(null as any), "");
+    assert.equal(normalizeNamespace(undefined as any), "");
   });
 });
