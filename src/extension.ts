@@ -1343,6 +1343,8 @@ async function createWizPageUndoable(
   return wizDir;
 }
 
+let extensionDisposables: vscode.Disposable[] = [];
+
 export function activate(context: vscode.ExtensionContext) {
   vscode.window.showInformationMessage("Season Editor: activated!");
   console.log("[season-editor] activated");
@@ -1363,6 +1365,8 @@ export function activate(context: vscode.ExtensionContext) {
   fsWatcher.onDidChange(() => explorer.refresh());
 
   context.subscriptions.push(treeView, fsWatcher);
+
+  extensionDisposables.push(fsWatcher);
 
   context.subscriptions.push(
     vscode.commands.registerCommand("wiz.refresh", () => {
@@ -1824,4 +1828,11 @@ export function activate(context: vscode.ExtensionContext) {
   );
 }
 
-export function deactivate() {}
+export function deactivate() {
+  for (const d of extensionDisposables) {
+    try {
+      d.dispose();
+    } catch {}
+  }
+  extensionDisposables = [];
+}
