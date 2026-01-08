@@ -398,114 +398,124 @@ window.addEventListener(
 // -----------------------------
 // VSCode -> Webview messages
 // -----------------------------
-window.addEventListener("message", (event) => {
-  const msg = event.data;
-  if (!msg?.type) return;
+function onMessage(event) {
+  const msg = event?.data;
+  const type = msg?.type;
+  if (!type) return;
 
-  if (msg.type === "init") {
-    if ($title) $title.textContent = msg.folderName ?? "Wiz Folder";
-    tabs = msg.tabs || [];
+  const handler = messageHandlers[type];
+  if (!handler) return;
 
-    for (const t of tabs) {
-      dirtyByKey[t.key] = false;
-      baselineByKey[t.key] = null;
-    }
+  handler(msg);
+}
 
-    renderTabs();
-    ensureEditorReady(() => {
-      bindExternalDrop();
-    });
-    return;
-  }
-
-  if (msg.type === "openTab") {
-    openTab(msg.key);
-    return;
-  }
-
-  if (msg.type === "content") {
-    const key = msg.key;
-    const incoming = msg.text ?? "";
-    const missing = !!msg.missing;
-
-    ensureEditorReady((editor) => {
-      const model = ensureModel(key);
-
-      if (dirtyByKey[key]) {
-        if (key === activeKey) setStatus("Modified (incoming ignored)");
-        return;
-      }
-
-      model.setValue(incoming);
-      baselineByKey[key] = incoming;
-      dirtyByKey[key] = false;
-
-      if (key === activeKey) {
-        editor.setModel(model);
-        setLanguageByKeySafe(key);
-        updateHintForKey(key);
-        setStatus(
-          missing ? "File missing (will be created on Save)" : "Loaded"
-        );
-      }
-
-      renderTabs();
-    });
-    return;
-  }
-
-  if (msg.type === "saved") {
-    const key = msg.key;
-    ensureEditorReady(() => {
-      const model = modelByKey[key];
-      if (!model) return;
-
-      baselineByKey[key] = model.getValue();
-      dirtyByKey[key] = false;
-
-      renderTabs();
-      if (key === activeKey) setStatus("Saved");
-    });
-    return;
-  }
-
-  if (msg.type === "deleted") {
-    const key = msg.key;
-    if (!key) return;
-
-    if (!dirtyByKey[key]) {
-      baselineByKey[key] = "";
-      const model = modelByKey[key];
-      if (model) model.setValue("");
-    }
-
-    if (key === activeKey) setStatus("File deleted");
-    renderTabs();
-    return;
-  }
-
-  if (msg.type === "template") {
-    const text = msg.text ?? "";
-    const missing = !!msg.missing;
-
-    ensureEditorReady((editor) => {
-      clearDropDecorations(editor);
-
-      const trimmed = String(text).trim();
-      if (missing || !trimmed) {
-        lastDropPosition = null;
-        setStatus("Template not found");
-        return;
-      }
-
-      if (activeKey !== "pug") openTab("pug");
-      insertAtPosition(text, lastDropPosition || editor.getPosition());
-      lastDropPosition = null;
-      setStatus("Template inserted");
-    });
-    return;
-  }
+const messageHandlers = Object.freeze({
+  init: handleInit,
+  openTab: handleOpenTab,
+  content: handleContent,
+  saved: handleSaved,
+  deleted: handleDeleted,
+  template: handleTemplate,
 });
+
+window.addEventListener("message", onMessage);
+
+function handleInit(msg) {
+  if ($title) $title.textContent = msg.folderName ?? "Wiz Folder";
+  tabs = msg.tabs || [];
+
+  for (const t of tabs) {
+    dirtyByKey[t.key] = false;
+    baselineByKey[t.key] = null;
+  }
+
+  renderTabs();
+  ensureEditorReady(() => {
+    bindExternalDrop();
+  });
+}
+
+function handleOpenTab(msg) {
+  openTab(msg.key);
+}
+
+function handleContent(msg) {
+  const key = msg.key;
+  const incoming = msg.text ?? "";
+  const missing = !!msg.missing;
+
+  ensureEditorReady((editor) => {
+    const model = ensureModel(key);
+
+    if (dirtyByKey[key]) {
+      if (key === activeKey) setStatus("Modified (incoming ignored)");
+      return;
+    }
+
+    model.setValue(incoming);
+    baselineByKey[key] = incoming;
+    dirtyByKey[key] = false;
+
+    if (key === activeKey) {
+      editor.setModel(model);
+      setLanguageByKeySafe(key);
+      updateHintForKey(key);
+      setStatus(missing ? "File missing (will be created on Save)" : "Loaded");
+    }
+
+    renderTabs();
+  });
+}
+
+function handleSaved(msg) {
+  const key = msg.key;
+
+  ensureEditorReady(() => {
+    const model = modelByKey[key];
+    if (!model) return;
+
+    baselineByKey[key] = model.getValue();
+    dirtyByKey[key] = false;
+
+    renderTabs();
+    if (key === activeKey) setStatus("Saved");
+  });
+}
+
+function handleDeleted(msg) {
+  const key = msg.key;
+  if (!key) return;
+
+  if (!dirtyByKey[key]) {
+    baselineByKey[key] = "";
+    const model = modelByKey[key];
+    if (model) model.setValue("");
+  }
+
+  if (key === activeKey) setStatus("File deleted");
+  renderTabs();
+}
+
+function handleTemplate(msg) {
+  const text = msg.text ?? "";
+  const missing = !!msg.missing;
+
+  ensureEditorReady((editor) => {
+    clearDropDecorations(editor);
+
+    const trimmed = String(text).trim();
+    if (missing || !trimmed) {
+      lastDropPosition = null;
+      setStatus("Template not found");
+      return;
+    }
+
+    if (activeKey !== "pug") openTab("pug");
+    insertAtPosition(text, lastDropPosition || editor.getPosition());
+    lastDropPosition = null;
+    setStatus("Template inserted");
+  });
+}
 
 // optional
 if (window.__WIZ_EDITOR_READY__) {
