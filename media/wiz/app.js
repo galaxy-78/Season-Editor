@@ -222,8 +222,6 @@ function pickDroppedLine(e) {
   for (const line of lines) {
     if (line.startsWith("#")) continue;
 
-    // ✅ line 자체가 "/Users/...$0" 같은 케이스도 있고
-    // ✅ "file:///Users/..." 케이스도 있음
     const fsPath = extractFsPathFromDroppedText(line);
     return { raw: line, fsPath, sourceType: type };
   }
@@ -311,7 +309,7 @@ function bindExternalDrop() {
     block(e);
 
     if (!isInsideEditor(e.target)) {
-      ensureEditorReady((editor) => clearAll(editor)); // ✅ 밖으로 나가면 즉시 지움
+      ensureEditorReady((editor) => clearAll(editor)); // 밖으로 나가면 즉시 지움
       return;
     }
 
@@ -334,7 +332,7 @@ function bindExternalDrop() {
     if (!shouldHandle(e)) return;
     block(e);
 
-    ensureEditorReady((editor) => clearAll(editor)); // ✅ drop이면 무조건 한번 정리
+    ensureEditorReady((editor) => clearAll(editor)); // drop이면 무조건 한번 정리
 
     if (!isInsideEditor(e.target)) {
       setStatus("Drop ignored (outside editor)");

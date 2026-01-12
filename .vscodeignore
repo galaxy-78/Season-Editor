@@ -32,8 +32,18 @@ out/test/**
 *.vsix
 .DS_Store
 
-media/monaco/**
 coverage/**
 src/test/**
 **/*.test.ts
 **/*.unit.test.ts
+
+# CI / repo meta
+.github/**
+sonar-project.properties
+sonar-project.json
+sonarcloud.properties
+
+# dev / build caches
+node_modules/**
+out/**.map
+*.log

@@ -65,7 +65,7 @@ export function getPortalFromBaseFsPath(baseFsPath: string): string | null {
  * buildTemplate은 vscode.Uri에 의존하지 않게 "baseFsPath(string)"로 받게 변경
  */
 export function buildTemplate(
-  mode: WizMode,
+  mode: string,
   namespace: string,
   baseFsPath: string
 ) {
