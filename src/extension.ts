@@ -55,28 +55,28 @@ function getSeasonConfig() {
     "portal",
   ]);
 
-  // settings.json 직접 수정 같은 케이스 방어
-  const defaultModes = defaultModesRaw.filter(isWizMode);
+  const cleaned = defaultModesRaw
+    .map((s) => String(s ?? "").trim())
+    .filter(Boolean);
+
+  const defaultModes = Array.from(new Set(cleaned)); // 중복 제거
 
   return { defaultModes };
 }
 
-async function promptMode(): Promise<WizMode | undefined> {
+async function promptMode(): Promise<string | undefined> {
   const { defaultModes } = getSeasonConfig();
 
-  // 설정이 비었거나 잘못되면 전체 모드로 fallback
-  const modes: WizMode[] = defaultModes.length
-    ? defaultModes
-    : [...ALL_WIZ_MODES];
+  const modes = defaultModes.length ? defaultModes : [...ALL_WIZ_MODES];
 
-  return (await vscode.window.showQuickPick([...modes], {
+  return vscode.window.showQuickPick([...modes], {
     title: "Select Wiz mode",
     placeHolder: modes.join(" / "),
-  })) as WizMode | undefined;
+  });
 }
 
 function buildAppJson(
-  mode: WizMode,
+  mode: string,
   id: string,
   namespace: string,
   template: string
@@ -298,7 +298,7 @@ class FsNodeItem extends vscode.TreeItem {
           uri: vscode.Uri;
           parent?: vscode.Uri;
         }
-      | { kind: "wizModeRoot"; parent: vscode.Uri } // ✅ 추가
+      | { kind: "wizModeRoot"; parent: vscode.Uri } //  추가
       | { kind: "modeGroup"; parent: vscode.Uri; modeKey: string }
   ) {
     const { kind } = args;
@@ -380,25 +380,6 @@ class FsNodeItem extends vscode.TreeItem {
   }
 }
 
-async function listDirectWizFolders(dir: vscode.Uri): Promise<vscode.Uri[]> {
-  let entries: [string, vscode.FileType][] = [];
-  try {
-    entries = await vscode.workspace.fs.readDirectory(dir);
-  } catch {
-    return [];
-  }
-
-  const out: vscode.Uri[] = [];
-  for (const [name, type] of entries) {
-    if (type !== vscode.FileType.Directory) continue;
-    if (isSkippableDir(name)) continue;
-
-    const u = vscode.Uri.joinPath(dir, name);
-    if (await isWizFolder(u)) out.push(u);
-  }
-  return out;
-}
-
 async function findDirectWizFolders(dir: vscode.Uri): Promise<vscode.Uri[]> {
   let entries: [string, vscode.FileType][];
   try {
@@ -459,7 +440,7 @@ class WizExplorerProvider implements vscode.TreeDataProvider<FsNodeItem> {
 
     // modeGroup은 children 가짐
     if (element.kind === "modeGroup") {
-      const parentDir = element.parent; // ✅ modeGroup은 parent에 “실제 폴더 uri”가 들어있어야 함
+      const parentDir = element.parent;
       if (!parentDir) return [];
 
       const mode = element.modeKey ?? "unknown";
@@ -541,7 +522,7 @@ class WizExplorerProvider implements vscode.TreeDataProvider<FsNodeItem> {
       (f) => new FsNodeItem({ kind: "file", uri: f.uri })
     );
 
-    // ✅ 반환 순서: [modeGroup들] + [일반 폴더] + [파일]
+    //  반환 순서: [modeGroup들] + [일반 폴더] + [파일]
     return [...modeGroups, ...folderItems, ...fileItems];
   }
 }
@@ -576,7 +557,7 @@ class SeasonExplorerDnD implements vscode.TreeDragAndDropController<FsNodeItem> 
       const isDir =
         (st.type & vscode.FileType.Directory) === vscode.FileType.Directory;
 
-      // ✅ 폴더면 무조건 trailing slash
+      //  폴더면 무조건 trailing slash
       if (isDir && !u.path.endsWith("/")) {
         u = u.with({ path: u.path + "/" });
       }
@@ -615,7 +596,7 @@ class SeasonExplorerDnD implements vscode.TreeDragAndDropController<FsNodeItem> 
     dataTransfer.set(URI_LIST_MIME, new vscode.DataTransferItem(draggedUris));
 
     // -----------------------------
-    // 4) ✅ 외부 attach 핵심: uri-list 문자열을 "폴더 trailing slash"로 구성
+    // 4) 외부 attach 핵심: uri-list 문자열을 "폴더 trailing slash"로 구성
     // -----------------------------
     const uriTextList = (
       await Promise.all(draggedUris.map((u) => this.toExternalUriText(u)))
@@ -628,7 +609,7 @@ class SeasonExplorerDnD implements vscode.TreeDragAndDropController<FsNodeItem> 
     );
 
     // -----------------------------
-    // 5) ✅ resourceurls: 문자열만 1번만 세팅 (덮어쓰기 금지)
+    // 5) resourceurls: 문자열만 1번만 세팅 (덮어쓰기 금지)
     //    (여기서 Uri[]로 다시 set하면 webview getData가 꼬일 수 있음)
     // -----------------------------
     dataTransfer.set("resourceurls", new vscode.DataTransferItem(uriTextList));
@@ -690,7 +671,7 @@ class SeasonExplorerDnD implements vscode.TreeDragAndDropController<FsNodeItem> 
     if (target?.kind === "modeGroup") return;
 
     if (target) {
-      if (!target.uri) return; // ✅ 추가 (modeGroup 제외했으니 사실상 안전장치)
+      if (!target.uri) return; // 추가 (modeGroup 제외했으니 사실상 안전장치)
 
       if (target.kind === "workspace" || target.kind === "folder") {
         destDir = target.uri;
@@ -699,7 +680,7 @@ class SeasonExplorerDnD implements vscode.TreeDragAndDropController<FsNodeItem> 
       }
     }
 
-    // ✅ wizFolder 위/안으로 drop 금지
+    // wizFolder 위/안으로 drop 금지
     if (target?.kind === "wizFolder") {
       vscode.window.showInformationMessage(
         "Wiz folder 내부로 이동은 지원하지 않습니다."
@@ -715,7 +696,7 @@ class SeasonExplorerDnD implements vscode.TreeDragAndDropController<FsNodeItem> 
     }
 
     // ----------------------------
-    // ✅ 중복 자동 rename + 우리 undo/redo용 batch 기록
+    // 중복 자동 rename + 우리 undo/redo용 batch 기록
     // ----------------------------
     const skipped: string[] = [];
     const renamed: Array<{ from: string; to: string }> = [];
@@ -734,14 +715,14 @@ class SeasonExplorerDnD implements vscode.TreeDragAndDropController<FsNodeItem> 
 
         const baseName = path.basename(src.fsPath);
 
-        // ✅ 같은 폴더(=현재 부모)로 드롭이면 아무 일도 안 함
+        // 같은 폴더(=현재 부모)로 드롭이면 아무 일도 안 함
         const srcParent = vscode.Uri.file(path.dirname(src.fsPath));
         if (srcParent.fsPath === destDir.fsPath) {
           // 메시지/스킵 기록도 굳이 하지 않는 게 자연스러움
           continue;
         }
 
-        // ✅ wizFolder 자체 이동 막기
+        // wizFolder 자체 이동 막기
         if (await isWizFolder(src)) {
           vscode.window.showInformationMessage(
             `"${baseName}"는 Wiz 형식이라 이동할 수 없습니다.`
@@ -749,10 +730,10 @@ class SeasonExplorerDnD implements vscode.TreeDragAndDropController<FsNodeItem> 
           continue;
         }
 
-        // ✅ 동일 이름 충돌 시 자동 새 이름
+        // 동일 이름 충돌 시 자동 새 이름
         let dst = await pickNonConflictingUri(destDir, baseName);
 
-        // ✅ 이번 드롭 내에서도 이름 충돌 방지 (reserved)
+        //  이번 드롭 내에서도 이름 충돌 방지 (reserved)
         // pickNonConflictingUri는 "이미 존재하는 파일"만 보므로,
         // 같은 드롭에서 같은 이름을 두 개 옮기면 둘 다 file(1)로 잡힐 수 있음.
         while (reserved.has(reserveKey(dst))) {
@@ -766,7 +747,7 @@ class SeasonExplorerDnD implements vscode.TreeDragAndDropController<FsNodeItem> 
         const dstName = path.basename(dst.fsPath);
         if (dstName !== baseName) renamed.push({ from: baseName, to: dstName });
 
-        // ✅ 실제 이동 (applyEdit 사용 X)
+        //  실제 이동 (applyEdit 사용 X)
         await vscode.workspace.fs.rename(src, dst, { overwrite: false });
 
         movedPairs.push({ from: src, to: dst });
@@ -788,7 +769,7 @@ class SeasonExplorerDnD implements vscode.TreeDragAndDropController<FsNodeItem> 
       return;
     }
 
-    // ✅ 성공한 최종 from->to를 batch로 기록 (Undo/Redo가 이걸로 동작)
+    //  성공한 최종 from->to를 batch로 기록 (Undo/Redo가 이걸로 동작)
     pushOp({
       type: "batch",
       ops: movedPairs.map((p) => ({ type: "rename", from: p.from, to: p.to })),
@@ -796,7 +777,7 @@ class SeasonExplorerDnD implements vscode.TreeDragAndDropController<FsNodeItem> 
 
     setTimeout(() => this.refresh(), 0);
 
-    // ✅ 결과 요약
+    //  결과 요약
     if (renamed.length || skipped.length) {
       const msgParts: string[] = [];
       if (renamed.length) msgParts.push(`이름 변경 ${renamed.length}개`);
@@ -894,7 +875,7 @@ class WizFolderEditorProvider implements vscode.CustomReadonlyEditorProvider {
     const onChange = async (u: vscode.Uri) => {
       const basename = path.basename(u.fsPath);
 
-      // ✅ 내가 방금 저장한 파일이면 watcher 에코 무시
+      //  내가 방금 저장한 파일이면 watcher 에코 무시
       if (writing.has(basename)) return;
 
       const tab = WIZ_FILES.find((t) => t.filename === basename);
@@ -939,18 +920,18 @@ class WizFolderEditorProvider implements vscode.CustomReadonlyEditorProvider {
 
         const fileUri = vscode.Uri.joinPath(folderUri, tab.filename);
 
-        // ✅ watcher 에코 방지 시작
+        //  watcher 에코 방지 시작
         writing.add(tab.filename);
         try {
           await writeText(fileUri, msg.text ?? "");
           post({ type: "saved", key: tab.key, filename: tab.filename });
         } finally {
-          // ✅ 파일시스템 이벤트가 약간 늦게 올 수 있어서 살짝 딜레이 후 해제
+          //  파일시스템 이벤트가 약간 늦게 올 수 있어서 살짝 딜레이 후 해제
           setTimeout(() => writing.delete(tab.filename!), 150);
         }
         return;
       }
-      // ✅ 드롭된 값(문자열/경로)을 "wiz 폴더"로 최대한 정확히 복원
+      //  드롭된 값(문자열/경로)을 "wiz 폴더"로 최대한 정확히 복원
       function stripVsCodeSuffix(p: string) {
         // "/path/to/foo$0" 같은 suffix 제거
         return p.replace(/\$\d+$/, "");
@@ -1040,7 +1021,7 @@ class WizFolderEditorProvider implements vscode.CustomReadonlyEditorProvider {
         const t = json?.template ?? json?.Template ?? json?.TEMPLATE;
         if (t == null) return { text: "", missing: true };
 
-        // ✅ 여기서 "template 문자열"만 보낸다
+        //  여기서 "template 문자열"만 보낸다
         if (typeof t === "string") return { text: t, missing: false };
 
         // template이 객체/배열이면 stringify (혹시 모를 케이스)
@@ -1065,7 +1046,7 @@ class WizFolderEditorProvider implements vscode.CustomReadonlyEditorProvider {
             return;
           }
 
-          // ✅ 진짜 wiz 폴더인지 체크
+          //  진짜 wiz 폴더인지 체크
           if (!(await isWizFolder(wizFolder))) {
             post({ type: "template", text: "", missing: true });
             return;
@@ -1073,7 +1054,7 @@ class WizFolderEditorProvider implements vscode.CustomReadonlyEditorProvider {
 
           const { text, missing } = await getTemplateFromWizFolder(wizFolder);
 
-          // ✅ "app.json 전체"를 보내는 실수 방지: template은 보통 짧은 한 줄
+          //  "app.json 전체"를 보내는 실수 방지: template은 보통 짧은 한 줄
           // 혹시 실수로 전체 json이 들어오면 여기서 차단해도 됨(선택)
           // if (String(text).trim().startsWith("{")) { ... }
 
@@ -1087,7 +1068,7 @@ class WizFolderEditorProvider implements vscode.CustomReadonlyEditorProvider {
 
       if (msg?.type === "requestTemplateFromLastDrag") {
         try {
-          const dragged = this.dnd.getLastDraggedUris(); // ✅ 위에서 만든 dnd 인스턴스 사용
+          const dragged = this.dnd.getLastDraggedUris(); //  위에서 만든 dnd 인스턴스 사용
           if (!dragged?.length) {
             post({ type: "template", text: "", missing: true });
             return;
@@ -1305,7 +1286,7 @@ function getBaseUriFromTreeItem(
 async function createWizPageUndoable(
   parentDir: vscode.Uri,
   folderName: string,
-  mode: WizMode,
+  mode: string,
   id: string,
   namespace: string
 ) {
@@ -1327,7 +1308,7 @@ async function createWizPageUndoable(
     ops.push({ type: "createFile", uri: fileUri, contents: data });
   }
 
-  // ✅ app.json (mode/id/namespace/template 반영)
+  // app.json (mode/id/namespace/template 반영)
   {
     const template = buildTemplate(mode, namespace, parentDir.fsPath);
     const fileUri = vscode.Uri.joinPath(wizDir, "app.json");
@@ -1374,32 +1355,32 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  async function setSeasonExplorerFocused(v: boolean) {
-    await vscode.commands.executeCommand(
-      "setContext",
-      "seasonExplorerFocused",
-      v
-    );
-  }
+  // async function setSeasonExplorerFocused(v: boolean) {
+  //   await vscode.commands.executeCommand(
+  //     "setContext",
+  //     "seasonExplorerFocused",
+  //     v
+  //   );
+  // }
 
-  // 초기값
-  setSeasonExplorerFocused(false);
+  // // 초기값
+  // setSeasonExplorerFocused(false);
 
-  // view 보임/숨김
-  treeView.onDidChangeVisibility((e) => {
-    // visible만으론 focus 보장 안 되지만, 최소한 보일 때는 true로 두는 전략
-    setSeasonExplorerFocused(e.visible);
-  });
+  // // view 보임/숨김
+  // treeView.onDidChangeVisibility((e) => {
+  //   // visible만으론 focus 보장 안 되지만, 최소한 보일 때는 true로 두는 전략
+  //   setSeasonExplorerFocused(e.visible);
+  // });
 
-  // selection 바뀌면 거의 항상 트리뷰에 포커스가 들어온 상태
-  treeView.onDidChangeSelection(() => {
-    setSeasonExplorerFocused(true);
-  });
+  // // selection 바뀌면 거의 항상 트리뷰에 포커스가 들어온 상태
+  // treeView.onDidChangeSelection(() => {
+  //   setSeasonExplorerFocused(true);
+  // });
 
-  // 에디터로 포커스 갔을 가능성이 있으면 끄기(완벽하진 않지만 체감 확 좋아짐)
-  vscode.window.onDidChangeActiveTextEditor(() => {
-    setSeasonExplorerFocused(false);
-  });
+  // // 에디터로 포커스 갔을 가능성이 있으면 끄기(완벽하진 않지만 체감 확 좋아짐)
+  // vscode.window.onDidChangeActiveTextEditor(() => {
+  //   setSeasonExplorerFocused(false);
+  // });
 
   context.subscriptions.push(treeView);
 
@@ -1506,10 +1487,14 @@ export function activate(context: vscode.ExtensionContext) {
         return;
       }
 
-      const mode = await promptMode();
-      if (!mode) return;
+      const modeKey = await promptMode();
+      if (!modeKey) return;
 
-      if (mode === "portal") {
+      const isBuiltIn = isWizMode(modeKey); // 기존 유틸 재사용 가능
+      const builtInMode = isBuiltIn ? (modeKey as WizMode) : null;
+
+      // portal
+      if (builtInMode === "portal") {
         const appName = getPortalFromBaseFsPath(baseUri.fsPath);
         if (!appName) {
           vscode.window.showErrorMessage(
@@ -1519,37 +1504,62 @@ export function activate(context: vscode.ExtensionContext) {
         }
       }
 
-      const prefix = makeDefaultIdPrefix(mode);
+      let id = "";
+      let namespace = "";
 
-      // mode별 입력창
-      const rawName = await vscode.window.showInputBox({
-        title: mode === "portal" ? "New Portal" : `New ${mode}`,
-        placeHolder:
-          mode === "portal" ? "예: nav.admin" : `예: ${mode}.nav.admin`,
-        value: mode === "portal" ? "" : prefix,
-        validateInput: (v) => {
-          if (!v || !v.trim()) return "이름을 입력해주세요.";
-          if (v.includes("/") || v.includes("\\"))
-            return "경로 구분자(/, \\)는 사용할 수 없습니다.";
+      if (builtInMode) {
+        const prefix = makeDefaultIdPrefix(builtInMode);
 
-          const s = v.trim();
+        const rawName = await vscode.window.showInputBox({
+          title: builtInMode === "portal" ? "New Portal" : `New ${builtInMode}`,
+          placeHolder:
+            builtInMode === "portal"
+              ? "예: nav.admin"
+              : `예: ${builtInMode}.nav.admin`,
+          value: builtInMode === "portal" ? "" : prefix,
+          validateInput: (v) => {
+            if (!v || !v.trim()) return "이름을 입력해주세요.";
+            if (v.includes("/") || v.includes("\\"))
+              return "경로 구분자(/, \\)는 사용할 수 없습니다.";
+            const s = v.trim();
 
-          if (mode !== "portal") {
-            if (!s.startsWith(prefix))
-              return `반드시 "${prefix}"로 시작해야 합니다.`;
-            if (s === prefix)
-              return `"${prefix}" 뒤에 namespace를 붙여주세요. (예: ${mode}.nav.admin)`;
-            if (s.endsWith(".")) return "마지막은 '.'로 끝날 수 없습니다.";
-          }
+            if (builtInMode !== "portal") {
+              if (!s.startsWith(prefix))
+                return `반드시 "${prefix}"로 시작해야 합니다.`;
+              if (s === prefix)
+                return `"${prefix}" 뒤에 namespace를 붙여주세요.`;
+              if (s.endsWith(".")) return "마지막은 '.'로 끝날 수 없습니다.";
+            }
+            return null;
+          },
+        });
+        if (!rawName) return;
 
-          // portal은 그냥 허용(원하면 '.' 금지/허용 등 정책 추가 가능)
-          return null;
-        },
-      });
+        const derived = deriveIdAndNamespace(builtInMode, rawName);
+        id = derived.id;
+        namespace = derived.namespace;
+      } else {
+        //  커스텀 모드 로직
+        const raw = await vscode.window.showInputBox({
+          title: `New ${modeKey}`,
+          placeHolder: "예: nav.admin (슬래시 금지)",
+          validateInput: (v) => {
+            if (!v || !v.trim()) return "이름을 입력해주세요.";
+            if (v.includes("/") || v.includes("\\"))
+              return "경로 구분자(/, \\)는 사용할 수 없습니다.";
+            if (v.trim().endsWith("."))
+              return "마지막은 '.'로 끝날 수 없습니다.";
+            return null;
+          },
+        });
+        if (!raw) return;
 
-      if (!rawName) return;
+        const name = raw.trim();
 
-      const { id, namespace } = deriveIdAndNamespace(mode, rawName);
+        // id/folderName 규칙: `${modeKey}.${name}`
+        id = `${modeKey}.${name}`;
+        namespace = name; // 커스텀은 namespace만 name으로
+      }
 
       const folderName = id;
 
@@ -1557,7 +1567,7 @@ export function activate(context: vscode.ExtensionContext) {
         const wizDir = await createWizPageUndoable(
           baseUri,
           folderName,
-          mode,
+          modeKey,
           id,
           namespace
         );
@@ -1613,14 +1623,14 @@ export function activate(context: vscode.ExtensionContext) {
       const t = await getFileTypeSafe(targetUri);
       if (t === null) return; // 이미 없음
 
-      // ✅ 폴더면: VSCode undo 시스템에 태우지 말고 우리 로컬로 처리
+      //  폴더면: VSCode undo 시스템에 태우지 말고 우리 로컬로 처리
       if ((t & vscode.FileType.Directory) === vscode.FileType.Directory) {
         await rmdirUndoable(targetUri);
         setTimeout(() => explorer.refresh(), 0);
         return;
       }
 
-      // ✅ 파일이면: WorkspaceEdit deleteFile (VSCode bulk undo/redo 대상)
+      //  파일이면: WorkspaceEdit deleteFile (VSCode bulk undo/redo 대상)
       await deleteFileUndoable(targetUri);
     })
   );
@@ -1701,7 +1711,7 @@ export function activate(context: vscode.ExtensionContext) {
           }
 
           case "batch": {
-            // ✅ undo는 역순으로 되돌리기
+            //  undo는 역순으로 되돌리기
             for (let i = op.ops.length - 1; i >= 0; i--) {
               const inner = op.ops[i];
               if (inner.type === "rename") {
@@ -1779,7 +1789,7 @@ export function activate(context: vscode.ExtensionContext) {
             break;
 
           case "batch": {
-            // ✅ redo는 정순으로 다시 적용
+            //  redo는 정순으로 다시 적용
             for (const inner of op.ops) {
               if (inner.type === "rename") {
                 await vscode.workspace.fs.rename(inner.from, inner.to, {

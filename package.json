@@ -14,7 +14,7 @@
   "author": {
     "name": "galaxy-78"
   },
-  "version": "0.0.5",
+  "version": "0.0.6",
   "repository": {
     "type": "git",
     "url": "https://github.com/galaxy-78/Season-Editor.git"
@@ -50,13 +50,7 @@
         "seasonEditor.defaultModes": {
           "type": "array",
           "items": {
-            "type": "string",
-            "enum": [
-              "page",
-              "component",
-              "layout",
-              "portal"
-            ]
+            "type": "string"
           },
           "default": [
             "page",
@@ -64,7 +58,8 @@
             "layout",
             "portal"
           ],
-          "description": "New Wiz Page 모드 선택에 보여줄 목록"
+          "uniqueItems": true,
+          "markdownDescription": "New Wiz Page 모드 선택에 보여줄 목록2\n\n예:\n- page\n- component\n- layout\n- portal\n- customMode"
         }
       }
     },
@@ -201,12 +196,22 @@
       {
         "command": "seasonExplorer.undo",
         "key": "cmd+z",
-        "mac": "cmd+z"
+        "when": "view == wizExplorer"
       },
       {
         "command": "seasonExplorer.redo",
         "key": "cmd+shift+z",
-        "mac": "cmd+shift+z"
+        "when": "view == wizExplorer"
+      },
+      {
+        "command": "seasonExplorer.undo",
+        "key": "ctrl+z",
+        "when": "view == wizExplorer"
+      },
+      {
+        "command": "seasonExplorer.redo",
+        "key": "ctrl+shift+z",
+        "when": "view == wizExplorer"
       }
     ]
   },
